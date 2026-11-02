@@ -5,6 +5,7 @@ from typing import List, Optional
 import requests
 from bs4 import BeautifulSoup
 
+
 app = FastAPI(title="SIIAU Oferta Académica API")
 
 app.add_middleware(
