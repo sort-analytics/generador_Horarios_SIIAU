@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIIAU Schedule API - Local</title>
+    <title>SIIAU Schedule API</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans text-gray-800">
@@ -82,22 +82,30 @@
                 let response;
                 if (materiasList.length === 1) {
                     response = await fetch(`/api/oferta?materia=${materiasList[0]}&ciclo=${ciclo}&centro=${centro}`);
-                    rawData = await response.json();
-                    renderSingleMateria(rawData);
                 } else {
                     response = await fetch(`/api/oferta/batch`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ materias: materiasList, ciclo, centro })
                     });
-                    rawData = await response.json();
+                }
+
+                rawData = await response.json();
+
+                if (!response.ok || rawData.detail) {
+                    throw new Error(rawData.detail || `Error HTTP ${response.status}`);
+                }
+
+                if (materiasList.length === 1) {
+                    renderSingleMateria(rawData);
+                } else {
                     renderBatchMaterias(rawData);
                 }
 
                 document.getElementById('jsonPreview').textContent = JSON.stringify(rawData, null, 2);
                 resultsContainer.classList.remove('hidden');
             } catch (err) {
-                alert('Error al consultar: ' + err.message);
+                alert('⚠️ Error en la consulta: ' + err.message);
             } finally {
                 loading.classList.add('hidden');
             }
@@ -105,13 +113,13 @@
 
         function renderSingleMateria(data) {
             document.getElementById('resultsHeader').textContent = `Materia: ${data.materia_buscada} (${data.total_secciones} Secciones)`;
-            document.getElementById('tablesContainer').appendChild(createTableCard(data.materia_buscada, data.secciones));
+            document.getElementById('tablesContainer').appendChild(createTableCard(data.materia_buscada, data.secciones || []));
         }
 
         function renderBatchMaterias(data) {
             document.getElementById('resultsHeader').textContent = `Consulta Múltiple (${data.total_materias} Materias)`;
             const container = document.getElementById('tablesContainer');
-            for (const [materia, secciones] of Object.entries(data.resultados)) {
+            for (const [materia, secciones] of Object.entries(data.resultados || {})) {
                 container.appendChild(createTableCard(materia, secciones));
             }
         }
@@ -121,7 +129,7 @@
             wrapper.className = "bg-white shadow rounded-lg overflow-hidden border border-gray-200";
 
             let rowsHtml = '';
-            if (secciones.length === 0) {
+            if (!secciones || secciones.length === 0) {
                 rowsHtml = `<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No se encontraron secciones.</td></tr>`;
             } else {
                 secciones.forEach(sec => {
@@ -157,7 +165,7 @@
             wrapper.innerHTML = `
                 <div class="bg-blue-900 text-white px-6 py-3 flex justify-between items-center">
                     <h3 class="font-bold text-lg">${materia}</h3>
-                    <span class="text-xs bg-blue-800 px-2 py-1 rounded">${secciones.length} secciones</span>
+                    <span class="text-xs bg-blue-800 px-2 py-1 rounded">${secciones ? secciones.length : 0} secciones</span>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">

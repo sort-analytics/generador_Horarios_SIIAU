@@ -1,11 +1,19 @@
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import requests
 from bs4 import BeautifulSoup
 
-app = FastAPI(title="SIIAU Oferta Local API")
+app = FastAPI(title="SIIAU Oferta Académica API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 URL_SIIAU = "https://siiauescolar.siiau.udg.mx/wal/sspseca.consulta_oferta"
 DIAS_MAP = {0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves", 4: "Viernes", 5: "Sábado"}
@@ -32,7 +40,7 @@ def extraer_oferta_siiau(ciclo: str, centro: str, materia: str):
     }
 
     try:
-        response = requests.post(URL_SIIAU, data=payload, headers=headers, timeout=12)
+        response = requests.post(URL_SIIAU, data=payload, headers=headers, timeout=10)
         response.encoding = 'latin-1'
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Error conectando con SIIAU: {str(e)}")
@@ -107,16 +115,8 @@ def extraer_oferta_siiau(ciclo: str, centro: str, materia: str):
 
     return secciones
 
-@app.get("/")
-def serve_index():
-    return FileResponse("index.html")
-
 @app.get("/api/oferta")
-def obtener_oferta(
-    materia: str = Query(...),
-    ciclo: str = Query("202620"),
-    centro: str = Query("D")
-):
+def obtener_oferta(materia: str, ciclo: str = "202620", centro: str = "D"):
     secciones = extraer_oferta_siiau(ciclo, centro, materia)
     return {
         "ciclo": ciclo,
@@ -134,10 +134,10 @@ class BatchQuery(BaseModel):
 @app.post("/api/oferta/batch")
 def obtener_oferta_batch(query: BatchQuery):
     resultados = {}
-    for mat in query.materias:
-        m_clean = mat.strip().upper()
-        if m_clean:
-            resultados[m_clean] = extraer_oferta_siiau(query.ciclo, query.centro, m_clean)
+    for m in query.materias:
+        clean = m.strip().upper()
+        if clean:
+            resultados[clean] = extraer_oferta_siiau(query.ciclo, query.centro, clean)
     return {
         "ciclo": query.ciclo,
         "centro": query.centro,
