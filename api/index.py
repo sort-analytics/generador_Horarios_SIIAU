@@ -115,7 +115,11 @@ def extraer_oferta_siiau(ciclo: str, centro: str, materia: str):
 
     return secciones
 
-# Soporta /api/oferta y /oferta directamente
+@app.get("/")
+@app.get("/api")
+def root():
+    return {"status": "ok", "message": "SIIAU API activa"}
+
 @app.get("/api/oferta")
 @app.get("/oferta")
 def obtener_oferta(materia: str, ciclo: str = "202620", centro: str = "D"):
@@ -133,7 +137,6 @@ class BatchQuery(BaseModel):
     ciclo: Optional[str] = "202620"
     centro: Optional[str] = "D"
 
-# Soporta /api/oferta/batch y /oferta/batch directamente
 @app.post("/api/oferta/batch")
 @app.post("/oferta/batch")
 def obtener_oferta_batch(query: BatchQuery):
