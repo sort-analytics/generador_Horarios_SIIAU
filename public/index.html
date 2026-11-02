@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIIAU Schedule API - Local</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <header class="mb-8 border-b pb-4">
+            <h1 class="text-3xl font-bold text-blue-900">🎓 SIIAU Schedule API</h1>
+            <p class="text-gray-600">Extracción estructurada en tiempo real para armar horarios</p>
+        </header>
+
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <form id="siiauForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Materia(s)</label>
+                    <input type="text" id="materia" placeholder="ej. IL355, CC100" value="IL355" class="w-full border rounded px-3 py-2 uppercase focus:ring-2 focus:ring-blue-500 outline-none" required>
+                    <span class="text-xs text-gray-500">Separa por coma para lista/cola</span>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Ciclo</label>
+                    <input type="text" id="ciclo" value="202620" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Centro (CUP)</label>
+                    <select id="centro" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="D" selected>CUCEI (D)</option>
+                        <option value="A">CUAAD (A)</option>
+                        <option value="B">CUCEA (B)</option>
+                        <option value="C">CUCS (C)</option>
+                        <option value="E">CUCSH (E)</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded transition duration-200">
+                        Consultar Oferta
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="loading" class="hidden text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+            <p class="mt-2 text-gray-600 font-medium">Obteniendo respuesta de SIIAU...</p>
+        </div>
+
+        <div id="resultsContainer" class="space-y-6 hidden">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-800" id="resultsHeader">Resultados</h2>
+                <button onclick="toggleJsonView()" class="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-gray-700">
+                    Ver JSON Estructurado
+                </button>
+            </div>
+            <pre id="jsonPreview" class="hidden bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-xs font-mono max-h-96"></pre>
+            <div id="tablesContainer" class="space-y-8"></div>
+        </div>
+    </div>
+
+    <script>
+        let rawData = null;
+
+        document.getElementById('siiauForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const materiasInput = document.getElementById('materia').value.trim();
+            const ciclo = document.getElementById('ciclo').value.trim();
+            const centro = document.getElementById('centro').value;
+            
+            const loading = document.getElementById('loading');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const tablesContainer = document.getElementById('tablesContainer');
+            
+            loading.classList.remove('hidden');
+            resultsContainer.classList.add('hidden');
+            tablesContainer.innerHTML = '';
+
+            const materiasList = materiasInput.split(',').map(m => m.trim()).filter(m => m.length > 0);
+
+            try {
+                let response;
+                if (materiasList.length === 1) {
+                    response = await fetch(`/api/oferta?materia=${materiasList[0]}&ciclo=${ciclo}&centro=${centro}`);
+                    rawData = await response.json();
+                    renderSingleMateria(rawData);
+                } else {
+                    response = await fetch(`/api/oferta/batch`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ materias: materiasList, ciclo, centro })
+                    });
+                    rawData = await response.json();
+                    renderBatchMaterias(rawData);
+                }
+
+                document.getElementById('jsonPreview').textContent = JSON.stringify(rawData, null, 2);
+                resultsContainer.classList.remove('hidden');
+            } catch (err) {
+                alert('Error al consultar: ' + err.message);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        });
+
+        function renderSingleMateria(data) {
+            document.getElementById('resultsHeader').textContent = `Materia: ${data.materia_buscada} (${data.total_secciones} Secciones)`;
+            document.getElementById('tablesContainer').appendChild(createTableCard(data.materia_buscada, data.secciones));
+        }
+
+        function renderBatchMaterias(data) {
+            document.getElementById('resultsHeader').textContent = `Consulta Múltiple (${data.total_materias} Materias)`;
+            const container = document.getElementById('tablesContainer');
+            for (const [materia, secciones] of Object.entries(data.resultados)) {
+                container.appendChild(createTableCard(materia, secciones));
+            }
+        }
+
+        function createTableCard(materia, secciones) {
+            const wrapper = document.createElement('div');
+            wrapper.className = "bg-white shadow rounded-lg overflow-hidden border border-gray-200";
+
+            let rowsHtml = '';
+            if (secciones.length === 0) {
+                rowsHtml = `<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No se encontraron secciones.</td></tr>`;
+            } else {
+                secciones.forEach(sec => {
+                    const horariosHtml = sec.horarios.map(h => 
+                        `<div class="mb-1 text-xs">
+                            <span class="font-semibold text-blue-800">${h.dias.join(', ')}</span> 
+                            <span class="bg-gray-100 px-1 rounded border">${h.hora_inicio}-${h.hora_fin}</span>
+                            <span class="text-gray-500">[${h.edificio} ${h.aula}]</span>
+                        </div>`
+                    ).join('');
+
+                    const profsHtml = sec.profesores.map(p => 
+                        `<div class="text-xs text-gray-700 font-medium">👨‍🏫 ${p}</div>`
+                    ).join('') || '<span class="text-xs text-red-400">Sin Profesor</span>';
+
+                    rowsHtml += `
+                        <tr class="hover:bg-gray-50 text-sm border-b">
+                            <td class="px-4 py-3 font-mono font-bold text-blue-900">${sec.nrc}</td>
+                            <td class="px-4 py-3 font-semibold">${sec.seccion}</td>
+                            <td class="px-4 py-3">${sec.creditos} CR</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 rounded text-xs ${sec.disponibles > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} font-medium">
+                                    ${sec.disponibles} / ${sec.cupo}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">${horariosHtml}</td>
+                            <td class="px-4 py-3">${profsHtml}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            wrapper.innerHTML = `
+                <div class="bg-blue-900 text-white px-6 py-3 flex justify-between items-center">
+                    <h3 class="font-bold text-lg">${materia}</h3>
+                    <span class="text-xs bg-blue-800 px-2 py-1 rounded">${secciones.length} secciones</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+                            <tr>
+                                <th class="px-4 py-3">NRC</th>
+                                <th class="px-4 py-3">Sec</th>
+                                <th class="px-4 py-3">Créditos</th>
+                                <th class="px-4 py-3">Lugares</th>
+                                <th class="px-4 py-3">Horario y Aula</th>
+                                <th class="px-4 py-3">Profesor</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+            `;
+            return wrapper;
+        }
+
+        function toggleJsonView() {
+            document.getElementById('jsonPreview').classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>
