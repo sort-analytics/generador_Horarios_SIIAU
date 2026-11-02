@@ -115,9 +115,25 @@ def extraer_oferta_siiau(ciclo: str, centro: str, materia: str):
 
     return secciones
 
+class BatchQuery(BaseModel):
+    materias: List[str]
+    ciclo: Optional[str] = "202620"
+    centro: Optional[str] = "D"
+
+# Rutas GET unificadas para resolver el ruteo de Vercel
+@app.get("/")
+@app.get("/api")
+@app.get("/api/index.py")
 @app.get("/api/oferta")
 @app.get("/oferta")
-def obtener_oferta(materia: str = Query(...), ciclo: str = Query("202620"), centro: str = Query("D")):
+def obtener_oferta(
+    materia: Optional[str] = Query(None),
+    ciclo: str = Query("202620"),
+    centro: str = Query("D")
+):
+    if not materia:
+        return {"status": "ok", "message": "SIIAU API activa"}
+
     secciones = extraer_oferta_siiau(ciclo, centro, materia)
     return {
         "ciclo": ciclo,
@@ -127,11 +143,10 @@ def obtener_oferta(materia: str = Query(...), ciclo: str = Query("202620"), cent
         "secciones": secciones
     }
 
-class BatchQuery(BaseModel):
-    materias: List[str]
-    ciclo: Optional[str] = "202620"
-    centro: Optional[str] = "D"
-
+# Rutas POST unificadas para peticiones por lote
+@app.post("/")
+@app.post("/api")
+@app.post("/api/index.py")
 @app.post("/api/oferta/batch")
 @app.post("/oferta/batch")
 def obtener_oferta_batch(query: BatchQuery):
