@@ -115,14 +115,9 @@ def extraer_oferta_siiau(ciclo: str, centro: str, materia: str):
 
     return secciones
 
-@app.get("/")
-@app.get("/api")
-def root():
-    return {"status": "ok", "message": "SIIAU API activa"}
-
 @app.get("/api/oferta")
 @app.get("/oferta")
-def obtener_oferta(materia: str, ciclo: str = "202620", centro: str = "D"):
+def obtener_oferta(materia: str = Query(...), ciclo: str = Query("202620"), centro: str = Query("D")):
     secciones = extraer_oferta_siiau(ciclo, centro, materia)
     return {
         "ciclo": ciclo,
