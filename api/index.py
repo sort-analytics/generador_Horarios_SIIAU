@@ -5,7 +5,6 @@ from typing import List, Optional
 import requests
 from bs4 import BeautifulSoup
 
-
 app = FastAPI(title="SIIAU Oferta Académica API")
 
 app.add_middleware(
@@ -116,7 +115,9 @@ def extraer_oferta_siiau(ciclo: str, centro: str, materia: str):
 
     return secciones
 
+# Soporta /api/oferta y /oferta directamente
 @app.get("/api/oferta")
+@app.get("/oferta")
 def obtener_oferta(materia: str, ciclo: str = "202620", centro: str = "D"):
     secciones = extraer_oferta_siiau(ciclo, centro, materia)
     return {
@@ -132,7 +133,9 @@ class BatchQuery(BaseModel):
     ciclo: Optional[str] = "202620"
     centro: Optional[str] = "D"
 
+# Soporta /api/oferta/batch y /oferta/batch directamente
 @app.post("/api/oferta/batch")
+@app.post("/oferta/batch")
 def obtener_oferta_batch(query: BatchQuery):
     resultados = {}
     for m in query.materias:
