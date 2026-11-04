@@ -14,29 +14,69 @@
         </header>
 
         <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-            <form id="siiauForm" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="md:col-span-3">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Lista de Materias (Claves)</label>
-                    <textarea id="materia" rows="3" placeholder="Pega aquí tus claves separadas por coma, espacios o saltos de línea. Ej: IL355, CC100, MA101" class="w-full border rounded-lg p-3 uppercase font-mono text-sm focus:ring-2 focus:ring-blue-500 outline-none border-gray-300" required>IL355, CC100</textarea>
-                    <span class="text-xs text-gray-500">Se usará el mismo Centro Universitario y Ciclo para toda la lista de materias.</span>
+            <form id="siiauForm" class="space-y-6">
+                <!-- Selector de Filtros Generales -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Ciclo Lectivo</label>
+                        <select id="ciclo" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none border-gray-300">
+                            <option value="202620" selected>202620 - Calendario 26 B</option>
+                            <option value="202710">202710 - Calendario 27 A</option>
+                            <option value="202680">202680 - Ciclo de Verano 2026</option>
+                            <option value="202610">202610 - Calendario 26 A</option>
+                            <option value="202580">202580 - Ciclo de Verano 2025</option>
+                            <option value="202520">202520 - Calendario 25 B</option>
+                            <option value="202510">202510 - Calendario 25 A</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Centro Universitario (CUP)</label>
+                        <select id="centro" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none border-gray-300">
+                            <option value="D" selected>D - C.U. DE CS. EXACTAS E ING. (CUCEI)</option>
+                            <option value="3">3 - C. U. DE TLAJOMULCO</option>
+                            <option value="4">4 - C. U. DE GUADALAJARA</option>
+                            <option value="5">5 - C.U. DE TLAQUEPAQUE</option>
+                            <option value="6">6 - C.U. DE CHAPALA</option>
+                            <option value="A">A - C.U. DE ARTE, ARQ. Y DISEÑO (CUAAD)</option>
+                            <option value="B">B - C.U. DE CS. BIOLOGICO Y AGR. (CUCBA)</option>
+                            <option value="C">C - C.U. DE CS. ECONOMICO-ADMVAS. (CUCEA)</option>
+                            <option value="E">E - C.U. DE CS. DE LA SALUD (CUCS)</option>
+                            <option value="F">F - C.U. DE CS. SOCIALES Y HUM. (CUCSH)</option>
+                            <option value="G">G - C.U. DE LOS ALTOS</option>
+                            <option value="H">H - C.U. DE LA CIENEGA</option>
+                            <option value="I">I - C.U. DE LA COSTA</option>
+                            <option value="J">J - C.U. DE LA COSTA SUR</option>
+                            <option value="K">K - C.U. DEL SUR</option>
+                            <option value="M">M - C. U. DE LOS VALLES</option>
+                            <option value="N">N - C.U. DEL NORTE</option>
+                            <option value="O">O - CUCEI SEDE VALLES</option>
+                            <option value="P">P - CUCSUR SEDE VALLES</option>
+                            <option value="Q">Q - CUCEI SEDE NORTE</option>
+                            <option value="U">U - SISTEMA DE UNIVERSIDAD VIRTUAL (SUV)</option>
+                        </select>
+                    </div>
                 </div>
+
+                <!-- Input interactivo tipo Chips / Cajitas -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Ciclo Lectivo</label>
-                    <select id="ciclo" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none border-gray-300">
-                        <option value="202620">Cargando ciclos...</option>
-                    </select>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Materias a consultar</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="materiaInput" placeholder="Escribe la clave (ej. IL355) y presiona Enter o Agregar" class="flex-1 border rounded-lg px-3 py-2 uppercase font-mono text-sm focus:ring-2 focus:ring-blue-500 outline-none border-gray-300">
+                        <button type="button" id="addBtn" onclick="agregarMateriaDesdeInput()" class="bg-gray-800 hover:bg-gray-900 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
+                            + Agregar
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">Puedes pegar una lista de claves (separadas por espacio o coma) y se convertirán en cajitas automáticamente.</p>
+                    
+                    <!-- Contenedor dinámico donde se agregan los chips -->
+                    <div id="chipsContainer" class="flex flex-wrap gap-2 p-3 bg-gray-50 border border-dashed rounded-lg min-h-[52px] items-center">
+                        <span class="text-xs text-gray-400 italic" id="emptyNotice">No hay materias agregadas aún.</span>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Centro Universitario (CUP)</label>
-                    <select id="centro" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none border-gray-300">
-                        <option value="D">Cargando centros...</option>
-                    </select>
-                </div>
-                <div class="flex items-end">
-                    <button type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 shadow">
-                        Consultar Lista de Materias
-                    </button>
-                </div>
+
+                <button type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 shadow text-base">
+                    Consultar Oferta de Materias
+                </button>
             </form>
         </div>
 
@@ -61,35 +101,70 @@
     </div>
 
     <script>
+        let materiasSet = new Set(['IL355', 'CC100']);
         let rawData = null;
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const res = await fetch('/api/opciones');
-                const data = await res.json();
-                
-                const cicloSelect = document.getElementById('ciclo');
-                const centroSelect = document.getElementById('centro');
+        document.addEventListener('DOMContentLoaded', () => {
+            renderChips();
 
-                if (data.ciclos && data.ciclos.length > 0) {
-                    cicloSelect.innerHTML = data.ciclos.map(c => 
-                        `<option value="${c.val}" ${c.val === '202620' ? 'selected' : ''}>${c.text}</option>`
-                    ).join('');
+            // Detectar tecla Enter en el input de materias
+            document.getElementById('materiaInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    agregarMateriaDesdeInput();
                 }
+            });
 
-                if (data.centros && data.centros.length > 0) {
-                    centroSelect.innerHTML = data.centros.map(c => 
-                        `<option value="${c.val}" ${c.val === 'D' ? 'selected' : ''}>${c.text}</option>`
-                    ).join('');
-                }
-            } catch (err) {
-                console.error("Error al cargar opciones dinámicas:", err);
-            }
+            // Permitir pegar multiples claves de golpe (auto-split)
+            document.getElementById('materiaInput').addEventListener('paste', (e) => {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                const items = text.split(/[\n,;\s]+/).map(m => m.trim().toUpperCase()).filter(m => m.length > 0);
+                items.forEach(m => materiasSet.add(m));
+                document.getElementById('materiaInput').value = '';
+                renderChips();
+            });
         });
+
+        function agregarMateriaDesdeInput() {
+            const input = document.getElementById('materiaInput');
+            const items = input.value.split(/[\n,;\s]+/).map(m => m.trim().toUpperCase()).filter(m => m.length > 0);
+            items.forEach(m => materiasSet.add(m));
+            input.value = '';
+            renderChips();
+        }
+
+        function removerMateria(clave) {
+            materiasSet.delete(clave);
+            renderChips();
+        }
+
+        function renderChips() {
+            const container = document.getElementById('chipsContainer');
+            if (materiasSet.size === 0) {
+                container.innerHTML = '<span class="text-xs text-gray-400 italic" id="emptyNotice">No hay materias agregadas aún.</span>';
+                return;
+            }
+
+            container.innerHTML = Array.from(materiasSet).map(m => `
+                <span class="inline-flex items-center bg-blue-100 text-blue-800 text-sm font-semibold font-mono px-3 py-1 rounded-full border border-blue-200">
+                    ${m}
+                    <button type="button" onclick="removerMateria('${m}')" class="ml-2 text-blue-600 hover:text-red-600 font-bold focus:outline-none text-xs">
+                        ✕
+                    </button>
+                </span>
+            `).join('');
+        }
 
         document.getElementById('siiauForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const materiasInput = document.getElementById('materia').value.trim();
+            const materiasList = Array.from(materiasSet);
+
+            if (materiasList.length === 0) {
+                alert("Agrega al menos una clave de materia a la lista.");
+                return;
+            }
+
             const ciclo = document.getElementById('ciclo').value.trim();
             const centro = document.getElementById('centro').value;
             
@@ -100,19 +175,6 @@
             loading.classList.remove('hidden');
             resultsContainer.classList.add('hidden');
             tablesContainer.innerHTML = '';
-
-            // Limpieza y deduplicación de claves ingresadas
-            const materiasList = [...new Set(
-                materiasInput.split(/[\n,;\s]+/)
-                    .map(m => m.trim().toUpperCase())
-                    .filter(m => m.length > 0)
-            )];
-
-            if (materiasList.length === 0) {
-                alert("Ingresa al menos una clave de materia.");
-                loading.classList.add('hidden');
-                return;
-            }
 
             try {
                 const response = await fetch(`/api/oferta/batch`, {

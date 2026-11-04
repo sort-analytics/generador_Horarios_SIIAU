@@ -16,13 +16,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-URL_FORMA = "https://siiauescolar.siiau.udg.mx/wal/sspseca.forma_consulta"
 URL_SIIAU = "https://siiauescolar.siiau.udg.mx/wal/sspseca.consulta_oferta"
 DIAS_MAP = {0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves", 4: "Viernes", 5: "Sábado"}
 
-CACHE_FILTROS = {"ciclos": [], "centros": []}
-
 FALLBACK_CENTROS = [
+    {"val": "D", "text": "D - C.U. DE CS. EXACTAS E ING. (CUCEI)"},
     {"val": "3", "text": "3 - C. U. DE TLAJOMULCO"},
     {"val": "4", "text": "4 - C. U. DE GUADALAJARA"},
     {"val": "5", "text": "5 - C.U. DE TLAQUEPAQUE"},
@@ -30,7 +28,6 @@ FALLBACK_CENTROS = [
     {"val": "A", "text": "A - C.U. DE ARTE, ARQ. Y DISEÑO (CUAAD)"},
     {"val": "B", "text": "B - C.U. DE CS. BIOLOGICO Y AGR. (CUCBA)"},
     {"val": "C", "text": "C - C.U. DE CS. ECONOMICO-ADMVAS. (CUCEA)"},
-    {"val": "D", "text": "D - C.U. DE CS. EXACTAS E ING. (CUCEI)"},
     {"val": "E", "text": "E - C.U. DE CS. DE LA SALUD (CUCS)"},
     {"val": "F", "text": "F - C.U. DE CS. SOCIALES Y HUM. (CUCSH)"},
     {"val": "G", "text": "G - C.U. DE LOS ALTOS"},
@@ -47,51 +44,14 @@ FALLBACK_CENTROS = [
 ]
 
 FALLBACK_CICLOS = [
+    {"val": "202620", "text": "202620 - Calendario 26 B"},
     {"val": "202710", "text": "202710 - Calendario 27 A"},
     {"val": "202680", "text": "202680 - Ciclo de Verano 2026"},
-    {"val": "202620", "text": "202620 - Calendario 26 B"},
     {"val": "202610", "text": "202610 - Calendario 26 A"},
     {"val": "202580", "text": "202580 - Ciclo de Verano 2025"},
     {"val": "202520", "text": "202520 - Calendario 25 B"},
     {"val": "202510", "text": "202510 - Calendario 25 A"}
 ]
-
-def cargar_opciones_siiau():
-    if CACHE_FILTROS["ciclos"] and CACHE_FILTROS["centros"]:
-        return CACHE_FILTROS
-
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        res = requests.get(URL_FORMA, headers=headers, timeout=6)
-        res.encoding = 'latin-1'
-        soup = BeautifulSoup(res.text, 'html.parser')
-
-        select_ciclo = soup.find('select', {'name': 'ciclop'})
-        ciclos = []
-        if select_ciclo:
-            for opt in select_ciclo.find_all('option'):
-                val = opt.get('value', '').strip()
-                txt = opt.get_text(strip=True)
-                if val:
-                    ciclos.append({"val": val, "text": txt})
-
-        select_cup = soup.find('select', {'name': 'cup'})
-        centros = []
-        if select_cup:
-            for opt in select_cup.find_all('option'):
-                val = opt.get('value', '').strip()
-                txt = opt.get_text(strip=True)
-                if val:
-                    centros.append({"val": val, "text": txt})
-
-        if ciclos and centros:
-            CACHE_FILTROS["ciclos"] = ciclos
-            CACHE_FILTROS["centros"] = centros
-            return CACHE_FILTROS
-    except Exception:
-        pass
-
-    return {"ciclos": FALLBACK_CICLOS, "centros": FALLBACK_CENTROS}
 
 def parsear_dias(dias_raw: str) -> List[str]:
     dias_encontrados = []
@@ -193,7 +153,7 @@ def extraer_oferta_siiau(ciclo: str, centro: str, materia: str):
 @app.get("/api/opciones")
 @app.get("/opciones")
 def obtener_opciones():
-    return cargar_opciones_siiau()
+    return {"ciclos": FALLBACK_CICLOS, "centros": FALLBACK_CENTROS}
 
 @app.get("/")
 @app.get("/api")
@@ -208,7 +168,6 @@ def obtener_oferta(
     if not materia:
         return {"status": "ok", "message": "SIIAU API activa"}
 
-    # Extraer claves únicas separadas por comas, espacios o saltos de línea
     lista_materias = []
     for item in re.split(r'[\n,;\s]+', materia):
         clean = item.strip().upper()
@@ -253,8 +212,6 @@ class BatchQuery(BaseModel):
 @app.post("/oferta/batch")
 def obtener_oferta_batch(query: BatchQuery):
     materias_limpias = []
-    
-    # Procesar string o lista de strings
     input_items = [query.materias] if isinstance(query.materias, str) else query.materias
     for raw_item in input_items:
         for clean_m in re.split(r'[\n,;\s]+', raw_item):
