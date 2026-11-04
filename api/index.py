@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Union
 import requests
+import re
 from bs4 import BeautifulSoup
 
 app = FastAPI(title="SIIAU Oferta Académica API")
@@ -15,8 +16,82 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+URL_FORMA = "https://siiauescolar.siiau.udg.mx/wal/sspseca.forma_consulta"
 URL_SIIAU = "https://siiauescolar.siiau.udg.mx/wal/sspseca.consulta_oferta"
 DIAS_MAP = {0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves", 4: "Viernes", 5: "Sábado"}
+
+CACHE_FILTROS = {"ciclos": [], "centros": []}
+
+FALLBACK_CENTROS = [
+    {"val": "3", "text": "3 - C. U. DE TLAJOMULCO"},
+    {"val": "4", "text": "4 - C. U. DE GUADALAJARA"},
+    {"val": "5", "text": "5 - C.U. DE TLAQUEPAQUE"},
+    {"val": "6", "text": "6 - C.U. DE CHAPALA"},
+    {"val": "A", "text": "A - C.U. DE ARTE, ARQ. Y DISEÑO (CUAAD)"},
+    {"val": "B", "text": "B - C.U. DE CS. BIOLOGICO Y AGR. (CUCBA)"},
+    {"val": "C", "text": "C - C.U. DE CS. ECONOMICO-ADMVAS. (CUCEA)"},
+    {"val": "D", "text": "D - C.U. DE CS. EXACTAS E ING. (CUCEI)"},
+    {"val": "E", "text": "E - C.U. DE CS. DE LA SALUD (CUCS)"},
+    {"val": "F", "text": "F - C.U. DE CS. SOCIALES Y HUM. (CUCSH)"},
+    {"val": "G", "text": "G - C.U. DE LOS ALTOS"},
+    {"val": "H", "text": "H - C.U. DE LA CIENEGA"},
+    {"val": "I", "text": "I - C.U. DE LA COSTA"},
+    {"val": "J", "text": "J - C.U. DE LA COSTA SUR"},
+    {"val": "K", "text": "K - C.U. DEL SUR"},
+    {"val": "M", "text": "M - C. U. DE LOS VALLES"},
+    {"val": "N", "text": "N - C.U. DEL NORTE"},
+    {"val": "O", "text": "O - CUCEI SEDE VALLES"},
+    {"val": "P", "text": "P - CUCSUR SEDE VALLES"},
+    {"val": "Q", "text": "Q - CUCEI SEDE NORTE"},
+    {"val": "U", "text": "U - SISTEMA DE UNIVERSIDAD VIRTUAL (SUV)"}
+]
+
+FALLBACK_CICLOS = [
+    {"val": "202710", "text": "202710 - Calendario 27 A"},
+    {"val": "202680", "text": "202680 - Ciclo de Verano 2026"},
+    {"val": "202620", "text": "202620 - Calendario 26 B"},
+    {"val": "202610", "text": "202610 - Calendario 26 A"},
+    {"val": "202580", "text": "202580 - Ciclo de Verano 2025"},
+    {"val": "202520", "text": "202520 - Calendario 25 B"},
+    {"val": "202510", "text": "202510 - Calendario 25 A"}
+]
+
+def cargar_opciones_siiau():
+    if CACHE_FILTROS["ciclos"] and CACHE_FILTROS["centros"]:
+        return CACHE_FILTROS
+
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        res = requests.get(URL_FORMA, headers=headers, timeout=6)
+        res.encoding = 'latin-1'
+        soup = BeautifulSoup(res.text, 'html.parser')
+
+        select_ciclo = soup.find('select', {'name': 'ciclop'})
+        ciclos = []
+        if select_ciclo:
+            for opt in select_ciclo.find_all('option'):
+                val = opt.get('value', '').strip()
+                txt = opt.get_text(strip=True)
+                if val:
+                    ciclos.append({"val": val, "text": txt})
+
+        select_cup = soup.find('select', {'name': 'cup'})
+        centros = []
+        if select_cup:
+            for opt in select_cup.find_all('option'):
+                val = opt.get('value', '').strip()
+                txt = opt.get_text(strip=True)
+                if val:
+                    centros.append({"val": val, "text": txt})
+
+        if ciclos and centros:
+            CACHE_FILTROS["ciclos"] = ciclos
+            CACHE_FILTROS["centros"] = centros
+            return CACHE_FILTROS
+    except Exception:
+        pass
+
+    return {"ciclos": FALLBACK_CICLOS, "centros": FALLBACK_CENTROS}
 
 def parsear_dias(dias_raw: str) -> List[str]:
     dias_encontrados = []
@@ -115,12 +190,11 @@ def extraer_oferta_siiau(ciclo: str, centro: str, materia: str):
 
     return secciones
 
-class BatchQuery(BaseModel):
-    materias: List[str]
-    ciclo: Optional[str] = "202620"
-    centro: Optional[str] = "D"
+@app.get("/api/opciones")
+@app.get("/opciones")
+def obtener_opciones():
+    return cargar_opciones_siiau()
 
-# Rutas GET unificadas para resolver el ruteo de Vercel
 @app.get("/")
 @app.get("/api")
 @app.get("/api/index.py")
@@ -134,30 +208,71 @@ def obtener_oferta(
     if not materia:
         return {"status": "ok", "message": "SIIAU API activa"}
 
-    secciones = extraer_oferta_siiau(ciclo, centro, materia)
+    # Extraer claves únicas separadas por comas, espacios o saltos de línea
+    lista_materias = []
+    for item in re.split(r'[\n,;\s]+', materia):
+        clean = item.strip().upper()
+        if clean and clean not in lista_materias:
+            lista_materias.append(clean)
+
+    if len(lista_materias) == 1:
+        m_code = lista_materias[0]
+        secciones = extraer_oferta_siiau(ciclo, centro, m_code)
+        return {
+            "ciclo": ciclo,
+            "centro": centro,
+            "materia_buscada": m_code,
+            "total_secciones": len(secciones),
+            "secciones": secciones
+        }
+
+    resultados = {}
+    total_secciones_global = 0
+    for m_code in lista_materias:
+        sec = extraer_oferta_siiau(ciclo, centro, m_code)
+        resultados[m_code] = sec
+        total_secciones_global += len(sec)
+
     return {
         "ciclo": ciclo,
         "centro": centro,
-        "materia_buscada": materia.upper(),
-        "total_secciones": len(secciones),
-        "secciones": secciones
+        "total_materias": len(resultados),
+        "total_secciones_global": total_secciones_global,
+        "resultados": resultados
     }
 
-# Rutas POST unificadas para peticiones por lote
+class BatchQuery(BaseModel):
+    materias: Union[List[str], str]
+    ciclo: Optional[str] = "202620"
+    centro: Optional[str] = "D"
+
 @app.post("/")
 @app.post("/api")
 @app.post("/api/index.py")
 @app.post("/api/oferta/batch")
 @app.post("/oferta/batch")
 def obtener_oferta_batch(query: BatchQuery):
+    materias_limpias = []
+    
+    # Procesar string o lista de strings
+    input_items = [query.materias] if isinstance(query.materias, str) else query.materias
+    for raw_item in input_items:
+        for clean_m in re.split(r'[\n,;\s]+', raw_item):
+            clean = clean_m.strip().upper()
+            if clean and clean not in materias_limpias:
+                materias_limpias.append(clean)
+
     resultados = {}
-    for m in query.materias:
-        clean = m.strip().upper()
-        if clean:
-            resultados[clean] = extraer_oferta_siiau(query.ciclo, query.centro, clean)
+    total_secciones_global = 0
+    for m in materias_limpias:
+        sec = extraer_oferta_siiau(query.ciclo, query.centro, m)
+        resultados[m] = sec
+        total_secciones_global += len(sec)
+
     return {
         "ciclo": query.ciclo,
         "centro": query.centro,
         "total_materias": len(resultados),
+        "total_secciones_global": total_secciones_global,
         "resultados": resultados
     }
