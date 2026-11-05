@@ -136,6 +136,12 @@ def extraer_oferta_siiau(ciclo: str, centro: str, materia: str):
                     if nombre_prof and nombre_prof not in profesores:
                         profesores.append(nombre_prof)
 
+        # T05: Clasificamos el estado de la sección (útil para el frontend)
+        if disponibles > 0:
+            status = "disponible"
+        else:
+            status = "lleno"
+
         secciones.append({
             "nrc": nrc,
             "clave": clave,
@@ -144,6 +150,8 @@ def extraer_oferta_siiau(ciclo: str, centro: str, materia: str):
             "creditos": creditos,
             "cupo": cupo,
             "disponibles": disponibles,
+            "status": status,
+            "tipo": "seccion",
             "profesores": profesores,
             "horarios": horarios
         })
