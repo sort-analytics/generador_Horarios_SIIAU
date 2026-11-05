@@ -10,13 +10,14 @@
         .week-calendar { min-width: 840px; }
         .week-header, .week-body { display: grid; grid-template-columns: 56px repeat(7, minmax(0, 1fr)); }
         .week-header { position: sticky; top: 0; z-index: 10; }
-        .week-axis, .week-column { height: 680px; position: relative; }
+        .week-axis, .week-column { height: 560px; position: relative; }
         .week-axis { border-right: 1px solid #d1d5db; }
         .week-column { border-right: 1px solid #e5e7eb; background: repeating-linear-gradient(to bottom, #fff 0, #fff 39px, #e5e7eb 39px, #e5e7eb 40px); }
         .week-label { height: 38px; border-bottom: 1px solid #e5e7eb; padding: 8px 4px; text-align: center; font-size: 12px; font-weight: 600; background: #f9fafb; }
         .class-event { position: absolute; left: 2px; right: 2px; min-height: 27px; z-index: 2; overflow: hidden; border-radius: 5px; padding: 3px 4px; font-size: 10px; line-height: 1.25; box-shadow: 0 1px 2px #0002; }
         .class-event strong, .class-event span { display: block; overflow: hidden; text-overflow: ellipsis; }
         .time-label { position: absolute; right: 5px; transform: translateY(-50%); color: #6b7280; font-size: 11px; }
+        .time-label-end { transform: translateY(-100%); }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans text-gray-800">
@@ -103,16 +104,16 @@
                             <label class="inline-flex items-center gap-2 text-sm"><input class="availability-day" type="checkbox" value="Sábado" checked> Sábado</label>
                             <label class="inline-flex items-center gap-2 text-sm"><input class="availability-day" type="checkbox" value="Domingo" checked> Domingo</label>
                         </div>
-                        <p class="mt-2 text-xs text-gray-500">Si desmarcas todos los días, no se aplicará filtro por día.</p>
+                        <p class="mt-2 text-xs text-gray-500">Si desmarcas todos los días, no se aplicará filtro por día. El rango horario permitido va de 07:00 a 21:00.</p>
                     </fieldset>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label for="horaInicio" class="block text-sm font-semibold text-gray-700 mb-1">Desde</label>
-                            <input id="horaInicio" type="time" class="w-full border rounded-lg px-3 py-2 border-gray-300">
+                            <input id="horaInicio" type="time" min="07:00" max="21:00" value="07:00" required class="w-full border rounded-lg px-3 py-2 border-gray-300">
                         </div>
                         <div>
                             <label for="horaFin" class="block text-sm font-semibold text-gray-700 mb-1">Hasta</label>
-                            <input id="horaFin" type="time" class="w-full border rounded-lg px-3 py-2 border-gray-300">
+                            <input id="horaFin" type="time" min="07:00" max="21:00" value="21:00" required class="w-full border rounded-lg px-3 py-2 border-gray-300">
                         </div>
                         <div>
                             <label for="maxResultados" class="block text-sm font-semibold text-gray-700 mb-1">Horarios a mostrar</label>
@@ -164,6 +165,16 @@
     <script>
         let materiasSet = new Set(['IL355', 'CC100']);
         let rawData = null;
+        const horaInicioInput = document.getElementById('horaInicio');
+        const horaFinInput = document.getElementById('horaFin');
+
+        function validarRangoHoras() {
+            const ordenInvalido = horaInicioInput.value && horaFinInput.value && horaInicioInput.value >= horaFinInput.value;
+            horaFinInput.setCustomValidity(ordenInvalido ? 'La hora final debe ser posterior a la hora inicial.' : '');
+        }
+
+        horaInicioInput.addEventListener('input', validarRangoHoras);
+        horaFinInput.addEventListener('input', validarRangoHoras);
 
         document.addEventListener('DOMContentLoaded', () => {
             renderChips();
@@ -219,6 +230,8 @@
 
         document.getElementById('siiauForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            validarRangoHoras();
+            if (!e.currentTarget.reportValidity()) return;
             const materiasList = Array.from(materiasSet);
 
             if (materiasList.length === 0) {
@@ -317,9 +330,9 @@
             ['#fce7f3', '#be185d'], ['#ede9fe', '#6d28d9'], ['#cffafe', '#0e7490'],
             ['#ffedd5', '#c2410c'], ['#e0e7ff', '#4338ca']
         ];
-        const INICIO_CALENDARIO = 6 * 60;
-        const DURACION_CALENDARIO = 17 * 60;
-        const ALTURA_CALENDARIO = 680;
+        const INICIO_CALENDARIO = 7 * 60;
+        const DURACION_CALENDARIO = 14 * 60;
+        const ALTURA_CALENDARIO = 560;
 
         function horaEnMinutos(valor) {
             if (!valor) return null;
@@ -398,13 +411,18 @@
             body.className = 'week-body';
             const axis = document.createElement('div');
             axis.className = 'week-axis';
-            for (let hora = 6; hora <= 22; hora++) {
+            for (let hora = 7; hora <= 20; hora++) {
                 const label = document.createElement('span');
                 label.className = 'time-label';
-                label.style.top = `${(hora - 6) * 40}px`;
+                label.style.top = `${(hora - 7) * 40}px`;
                 label.textContent = `${String(hora).padStart(2, '0')}:00`;
                 axis.appendChild(label);
             }
+            const endLabel = document.createElement('span');
+            endLabel.className = 'time-label time-label-end';
+            endLabel.style.top = `${ALTURA_CALENDARIO}px`;
+            endLabel.textContent = '21:00';
+            axis.appendChild(endLabel);
             body.appendChild(axis);
 
             const columnas = document.createElement('div');
