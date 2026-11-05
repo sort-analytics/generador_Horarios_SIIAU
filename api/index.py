@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Set, Tuple, Union
 import requests
 import re
+import unicodedata
 from bs4 import BeautifulSoup
 
 app = FastAPI(title="SIIAU Oferta Académica API")
@@ -388,7 +389,9 @@ def normalizar_dias(dias: Optional[List[str]]) -> Optional[Set[str]]:
         return None
     normalizados = set()
     for valor in dias:
-        clave = re.sub(r"[^A-ZÁÉÍÓÚÑ]", "", valor.upper())
+        texto = unicodedata.normalize("NFD", valor.upper())
+        sin_acentos = "".join(char for char in texto if unicodedata.category(char) != "Mn")
+        clave = re.sub(r"[^A-ZÑ]", "", sin_acentos)
         dia = DIAS_ALIASES.get(clave)
         if not dia:
             raise HTTPException(status_code=422, detail=f"Día no reconocido: {valor}")
