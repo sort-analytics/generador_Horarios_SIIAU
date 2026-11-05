@@ -95,6 +95,7 @@
                     Ver JSON
                 </button>
             </div>
+            <div id="validationSummary" class="hidden bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-4 text-sm" role="status" aria-live="polite"></div>
             <pre id="jsonPreview" class="hidden bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-xs font-mono max-h-96"></pre>
             <div id="tablesContainer" class="space-y-8"></div>
         </div>
@@ -190,6 +191,7 @@
                 }
 
                 renderBatchMaterias(rawData);
+                renderValidationSummary(rawData.validacion || {});
 
                 document.getElementById('jsonPreview').textContent = JSON.stringify(rawData, null, 2);
                 resultsContainer.classList.remove('hidden');
@@ -199,6 +201,36 @@
                 loading.classList.add('hidden');
             }
         });
+
+        function renderValidationSummary(validacion) {
+            const summary = document.getElementById('validationSummary');
+            const incidencias = Object.entries(validacion).filter(([, resultado]) =>
+                resultado.estado === 'clave_invalida' || resultado.estado === 'sin_oferta'
+            );
+
+            summary.replaceChildren();
+            if (incidencias.length === 0) {
+                summary.classList.add('hidden');
+                return;
+            }
+
+            const title = document.createElement('p');
+            title.className = 'font-semibold mb-2';
+            title.textContent = 'Revisa estas materias:';
+            summary.appendChild(title);
+
+            const list = document.createElement('ul');
+            list.className = 'list-disc pl-5 space-y-1';
+            incidencias.forEach(([materia, resultado]) => {
+                const item = document.createElement('li');
+                item.textContent = resultado.estado === 'clave_invalida'
+                    ? `${materia}: clave inválida. Usa entre 2 y 12 letras o números.`
+                    : `${materia}: no se encontró oferta en el ciclo y centro seleccionados.`;
+                list.appendChild(item);
+            });
+            summary.appendChild(list);
+            summary.classList.remove('hidden');
+        }
 
         function renderBatchMaterias(data) {
             document.getElementById('resultsHeader').textContent = `Consulta de ${data.total_materias} Materia(s)`;
