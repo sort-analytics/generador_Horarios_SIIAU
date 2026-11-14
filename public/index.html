@@ -29,7 +29,6 @@
 
         <div class="bg-white p-6 rounded-lg shadow-md mb-8">
             <form id="siiauForm" class="space-y-6">
-                <!-- Selector de Filtros Generales -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Ciclo Lectivo</label>
@@ -71,7 +70,6 @@
                     </div>
                 </div>
 
-                <!-- Input interactivo tipo Chips / Cajitas -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Materias a consultar</label>
                     <div class="flex gap-2 mb-2">
@@ -82,7 +80,6 @@
                     </div>
                     <p class="text-xs text-gray-500 mb-3">Puedes pegar una lista de claves (separadas por espacio o coma) y se convertirán en cajitas automáticamente.</p>
                     
-                    <!-- Contenedor dinámico donde se agregan los chips -->
                     <div id="chipsContainer" class="flex flex-wrap gap-2 p-3 bg-gray-50 border border-dashed rounded-lg min-h-[52px] items-center">
                         <span class="text-xs text-gray-400 italic" id="emptyNotice">No hay materias agregadas aún.</span>
                     </div>
@@ -122,7 +119,7 @@
                             </select>
                         </div>
                     </div>
-                                        <!-- T14: NUEVOS CONTROLES DE PROFESORES (Checkboxes) -->
+                    
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Profesores que prefieres</label>
@@ -138,6 +135,7 @@
                         </div>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">Haz clic directamente sobre los profesores para seleccionarlos.</p>
+                </section>
 
                 <button type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 shadow text-base">
                     Generar horarios sin empalmes
@@ -183,9 +181,8 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             renderChips();
-            cargarProfesores(); // Cargar profesores de las materias por defecto
+            cargarProfesores();
 
-            // Detectar tecla Enter en el input de materias
             document.getElementById('materiaInput').addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -193,7 +190,6 @@
                 }
             });
 
-            // Permitir pegar multiples claves de golpe (auto-split)
             document.getElementById('materiaInput').addEventListener('paste', (e) => {
                 e.preventDefault();
                 const text = (e.clipboardData || window.clipboardData).getData('text');
@@ -201,7 +197,7 @@
                 items.forEach(m => materiasSet.add(m));
                 document.getElementById('materiaInput').value = '';
                 renderChips();
-                cargarProfesores(); // Recargar profesores al pegar
+                cargarProfesores();
             });
         });
 
@@ -211,13 +207,13 @@
             items.forEach(m => materiasSet.add(m));
             input.value = '';
             renderChips();
-            cargarProfesores(); // Recargar profesores al agregar
+            cargarProfesores();
         }
 
         function removerMateria(clave) {
             materiasSet.delete(clave);
             renderChips();
-            cargarProfesores(); // Recargar profesores al eliminar
+            cargarProfesores();
         }
 
         function renderChips() {
@@ -237,8 +233,7 @@
             `).join('');
         }
 
-        // T14: Nueva función para cargar profesores dinámicamente
-                async function cargarProfesores() {
+        async function cargarProfesores() {
             const materiasList = Array.from(materiasSet);
             const divDeseados = document.getElementById('profesoresDeseados');
             const divExcluidos = document.getElementById('profesoresExcluidos');
@@ -271,7 +266,6 @@
                     return;
                 }
 
-                // Guardar selecciones previas para no perderlas
                 const prevDeseados = Array.from(divDeseados.querySelectorAll('input:checked')).map(i => i.value);
                 const prevExcluidos = Array.from(divExcluidos.querySelectorAll('input:checked')).map(i => i.value);
 
@@ -312,7 +306,6 @@
             const centro = document.getElementById('centro').value;
             const diasDisponibles = Array.from(document.querySelectorAll('.availability-day:checked')).map(input => input.value);
             
-                        // T14: Obtener valores de los checkboxes
             const profesoresDeseados = Array.from(document.querySelectorAll('.chk-deseados:checked')).map(chk => chk.value);
             const profesoresExcluidos = Array.from(document.querySelectorAll('.chk-excluidos:checked')).map(chk => chk.value);
             
