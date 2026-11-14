@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Dict, List, Optional, Set, Tuple, Union
 import requests
 import re
@@ -382,6 +382,24 @@ class GenerarHorariosRequest(BatchQuery):
     profesores_deseados: List[str] = Field(default_factory=list)
     profesores_excluidos: List[str] = Field(default_factory=list)
     max_resultados: int = 20
+
+    # T09: Validación inteligente para Días
+    @field_validator('dias_disponibles', mode='before')
+    @classmethod
+    def parse_dias(cls, v):
+        if isinstance(v, str):
+            # Si mandan "Lunes, Martes" o "Lunes Martes", lo separa en lista
+            return [d.strip() for d in re.split(r'[,;\s]+', v) if d.strip()]
+        return v
+
+    # T09: Validación inteligente para Profesores
+    @field_validator('profesores_deseados', 'profesores_excluidos', mode='before')
+    @classmethod
+    def parse_profesores(cls, v):
+        if isinstance(v, str):
+            # Si mandan "Lopez, Gomez", lo separa en lista
+            return [p.strip() for p in re.split(r'[,;]+', v) if p.strip()]
+        return v
 
 
 def normalizar_dias(dias: Optional[List[str]]) -> Optional[Set[str]]:
