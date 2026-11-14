@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIIAU Schedule API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .calendar-scroll { overflow-x: auto; }
+        .week-calendar { min-width: 840px; }
+        .week-header, .week-body { display: grid; grid-template-columns: 56px repeat(7, minmax(0, 1fr)); }
+        .week-header { position: sticky; top: 0; z-index: 10; }
+        .week-axis, .week-column { height: 560px; position: relative; }
+        .week-axis { border-right: 1px solid #d1d5db; }
+        .week-column { border-right: 1px solid #e5e7eb; background: repeating-linear-gradient(to bottom, #fff 0, #fff 39px, #e5e7eb 39px, #e5e7eb 40px); }
+        .week-label { height: 38px; border-bottom: 1px solid #e5e7eb; padding: 8px 4px; text-align: center; font-size: 12px; font-weight: 600; background: #f9fafb; }
+        .class-event { position: absolute; left: 2px; right: 2px; min-height: 27px; z-index: 2; overflow: hidden; border-radius: 5px; padding: 3px 4px; font-size: 10px; line-height: 1.25; box-shadow: 0 1px 2px #0002; }
+        .class-event strong, .class-event span { display: block; overflow: hidden; text-overflow: ellipsis; }
+        .time-label { position: absolute; right: 5px; transform: translateY(-50%); color: #6b7280; font-size: 11px; }
+        .time-label-end { transform: translateY(-100%); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <header class="mb-8 border-b pb-4">
+            <h1 class="text-3xl font-bold text-blue-900">🎓 SIIAU Schedule API</h1>
+            <p class="text-gray-600">Extracción estructurada de materias para generador de horarios</p>
+        </header>
+
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <form id="siiauForm" class="space-y-6">
+                <!-- Selector de Filtros Generales -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Ciclo Lectivo</label>
+                        <select id="ciclo" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none border-gray-300">
+                            <option value="202620" selected>202620 - Calendario 26 B</option>
+                            <option value="202710">202710 - Calendario 27 A</option>
+                            <option value="202680">202680 - Ciclo de Verano 2026</option>
+                            <option value="202610">202610 - Calendario 26 A</option>
+                            <option value="202580">202580 - Ciclo de Verano 2025</option>
+                            <option value="202520">202520 - Calendario 25 B</option>
+                            <option value="202510">202510 - Calendario 25 A</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Centro Universitario (CUP)</label>
+                        <select id="centro" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none border-gray-300">
+                            <option value="D" selected>D - C.U. DE CS. EXACTAS E ING. (CUCEI)</option>
+                            <option value="3">3 - C. U. DE TLAJOMULCO</option>
+                            <option value="4">4 - C. U. DE GUADALAJARA</option>
+                            <option value="5">5 - C.U. DE TLAQUEPAQUE</option>
+                            <option value="6">6 - C.U. DE CHAPALA</option>
+                            <option value="A">A - C.U. DE ARTE, ARQ. Y DISEÑO (CUAAD)</option>
+                            <option value="B">B - C.U. DE CS. BIOLOGICO Y AGR. (CUCBA)</option>
+                            <option value="C">C - C.U. DE CS. ECONOMICO-ADMVAS. (CUCEA)</option>
+                            <option value="E">E - C.U. DE CS. DE LA SALUD (CUCS)</option>
+                            <option value="F">F - C.U. DE CS. SOCIALES Y HUM. (CUCSH)</option>
+                            <option value="G">G - C.U. DE LOS ALTOS</option>
+                            <option value="H">H - C.U. DE LA CIENEGA</option>
+                            <option value="I">I - C.U. DE LA COSTA</option>
+                            <option value="J">J - C.U. DE LA COSTA SUR</option>
+                            <option value="K">K - C.U. DEL SUR</option>
+                            <option value="M">M - C. U. DE LOS VALLES</option>
+                            <option value="N">N - C.U. DEL NORTE</option>
+                            <option value="O">O - CUCEI SEDE VALLES</option>
+                            <option value="P">P - CUCSUR SEDE VALLES</option>
+                            <option value="Q">Q - CUCEI SEDE NORTE</option>
+                            <option value="U">U - SISTEMA DE UNIVERSIDAD VIRTUAL (SUV)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Input interactivo tipo Chips / Cajitas -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Materias a consultar</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="materiaInput" placeholder="Escribe la clave (ej. IL355) y presiona Enter o Agregar" class="flex-1 border rounded-lg px-3 py-2 uppercase font-mono text-sm focus:ring-2 focus:ring-blue-500 outline-none border-gray-300">
+                        <button type="button" id="addBtn" onclick="agregarMateriaDesdeInput()" class="bg-gray-800 hover:bg-gray-900 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
+                            + Agregar
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">Puedes pegar una lista de claves (separadas por espacio o coma) y se convertirán en cajitas automáticamente.</p>
+                    
+                    <!-- Contenedor dinámico donde se agregan los chips -->
+                    <div id="chipsContainer" class="flex flex-wrap gap-2 p-3 bg-gray-50 border border-dashed rounded-lg min-h-[52px] items-center">
+                        <span class="text-xs text-gray-400 italic" id="emptyNotice">No hay materias agregadas aún.</span>
+                    </div>
+                </div>
+
+                <section class="border-t pt-5 space-y-4" aria-labelledby="preferencesTitle">
+                    <div>
+                        <h2 id="preferencesTitle" class="text-lg font-bold text-gray-800">Disponibilidad y preferencias</h2>
+                        <p class="text-xs text-gray-500">Los horarios se filtrarán con estos criterios y se ordenarán para favorecer jornadas compactas.</p>
+                    </div>
+                    <fieldset>
+                        <legend class="block text-sm font-semibold text-gray-700 mb-2">Días en los que puedes asistir</legend>
+                        <div class="flex flex-wrap gap-x-5 gap-y-2">
+                            <label class="inline-flex items-center gap-2 text-sm"><input class="availability-day" type="checkbox" value="Lunes" checked> Lunes</label>
+                            <label class="inline-flex items-center gap-2 text-sm"><input class="availability-day" type="checkbox" value="Martes" checked> Martes</label>
+                            <label class="inline-flex items-center gap-2 text-sm"><input class="availability-day" type="checkbox" value="Miércoles" checked> Miércoles</label>
+                            <label class="inline-flex items-center gap-2 text-sm"><input class="availability-day" type="checkbox" value="Jueves" checked> Jueves</label>
+                            <label class="inline-flex items-center gap-2 text-sm"><input class="availability-day" type="checkbox" value="Viernes" checked> Viernes</label>
+                            <label class="inline-flex items-center gap-2 text-sm"><input class="availability-day" type="checkbox" value="Sábado" checked> Sábado</label>
+                            <label class="inline-flex items-center gap-2 text-sm"><input class="availability-day" type="checkbox" value="Domingo" checked> Domingo</label>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500">Si desmarcas todos los días, no se aplicará filtro por día. El rango horario permitido va de 07:00 a 21:00.</p>
+                    </fieldset>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="horaInicio" class="block text-sm font-semibold text-gray-700 mb-1">Desde</label>
+                            <input id="horaInicio" type="time" min="07:00" max="21:00" value="07:00" required class="w-full border rounded-lg px-3 py-2 border-gray-300">
+                        </div>
+                        <div>
+                            <label for="horaFin" class="block text-sm font-semibold text-gray-700 mb-1">Hasta</label>
+                            <input id="horaFin" type="time" min="07:00" max="21:00" value="21:00" required class="w-full border rounded-lg px-3 py-2 border-gray-300">
+                        </div>
+                        <div>
+                            <label for="maxResultados" class="block text-sm font-semibold text-gray-700 mb-1">Horarios a mostrar</label>
+                            <select id="maxResultados" class="w-full border rounded-lg px-3 py-2 border-gray-300">
+                                <option value="10">10</option><option value="20" selected>20</option><option value="50">50</option>
+                            </select>
+                        </div>
+                    </div>
+                                        <!-- T14: NUEVOS CONTROLES DE PROFESORES (Checkboxes) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Profesores que prefieres</label>
+                            <div id="profesoresDeseados" class="w-full border rounded-lg px-3 py-2 border-gray-300 h-32 overflow-y-auto bg-white text-sm">
+                                <span class="text-gray-400 italic">Agrega materias para cargar profesores...</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Profesores que quieres excluir</label>
+                            <div id="profesoresExcluidos" class="w-full border rounded-lg px-3 py-2 border-gray-300 h-32 overflow-y-auto bg-white text-sm">
+                                <span class="text-gray-400 italic">Agrega materias para cargar profesores...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Haz clic directamente sobre los profesores para seleccionarlos.</p>
+
+                <button type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 shadow text-base">
+                    Generar horarios sin empalmes
+                </button>
+            </form>
+        </div>
+
+        <div id="loading" class="hidden text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+            <p class="mt-2 text-gray-600 font-medium">Consultando la oferta y generando horarios...</p>
+        </div>
+
+        <div id="resultsContainer" class="space-y-6 hidden">
+            <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow border">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800" id="resultsHeader">Resultados</h2>
+                    <p class="text-xs text-gray-500" id="resultsSubheader"></p>
+                </div>
+                <button onclick="toggleJsonView()" class="text-sm bg-gray-200 hover:bg-gray-300 font-medium px-3 py-1.5 rounded-lg text-gray-700">
+                    Ver JSON
+                </button>
+            </div>
+            <div id="validationSummary" class="hidden bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-4 text-sm" role="status" aria-live="polite"></div>
+            <div id="generatorMessage" class="hidden bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4 text-sm" role="status" aria-live="polite"></div>
+            <pre id="jsonPreview" class="hidden bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-xs font-mono max-h-96"></pre>
+            <div id="tablesContainer" class="space-y-8"></div>
+        </div>
+    </div>
+
+    <script>
+        let materiasSet = new Set(['IL355', 'CC100']);
+        let rawData = null;
+        const horaInicioInput = document.getElementById('horaInicio');
+        const horaFinInput = document.getElementById('horaFin');
+
+        function validarRangoHoras() {
+            const ordenInvalido = horaInicioInput.value && horaFinInput.value && horaInicioInput.value >= horaFinInput.value;
+            horaFinInput.setCustomValidity(ordenInvalido ? 'La hora final debe ser posterior a la hora inicial.' : '');
+        }
+
+        horaInicioInput.addEventListener('input', validarRangoHoras);
+        horaFinInput.addEventListener('input', validarRangoHoras);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderChips();
+            cargarProfesores(); // Cargar profesores de las materias por defecto
+
+            // Detectar tecla Enter en el input de materias
+            document.getElementById('materiaInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    agregarMateriaDesdeInput();
+                }
+            });
+
+            // Permitir pegar multiples claves de golpe (auto-split)
+            document.getElementById('materiaInput').addEventListener('paste', (e) => {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                const items = text.split(/[\n,;\s]+/).map(m => m.trim().toUpperCase()).filter(m => m.length > 0);
+                items.forEach(m => materiasSet.add(m));
+                document.getElementById('materiaInput').value = '';
+                renderChips();
+                cargarProfesores(); // Recargar profesores al pegar
+            });
+        });
+
+        function agregarMateriaDesdeInput() {
+            const input = document.getElementById('materiaInput');
+            const items = input.value.split(/[\n,;\s]+/).map(m => m.trim().toUpperCase()).filter(m => m.length > 0);
+            items.forEach(m => materiasSet.add(m));
+            input.value = '';
+            renderChips();
+            cargarProfesores(); // Recargar profesores al agregar
+        }
+
+        function removerMateria(clave) {
+            materiasSet.delete(clave);
+            renderChips();
+            cargarProfesores(); // Recargar profesores al eliminar
+        }
+
+        function renderChips() {
+            const container = document.getElementById('chipsContainer');
+            if (materiasSet.size === 0) {
+                container.innerHTML = '<span class="text-xs text-gray-400 italic" id="emptyNotice">No hay materias agregadas aún.</span>';
+                return;
+            }
+
+            container.innerHTML = Array.from(materiasSet).map(m => `
+                <span class="inline-flex items-center bg-blue-100 text-blue-800 text-sm font-semibold font-mono px-3 py-1 rounded-full border border-blue-200">
+                    ${m}
+                    <button type="button" onclick="removerMateria('${m}')" class="ml-2 text-blue-600 hover:text-red-600 font-bold focus:outline-none text-xs">
+                        ✕
+                    </button>
+                </span>
+            `).join('');
+        }
+
+        // T14: Nueva función para cargar profesores dinámicamente
+                async function cargarProfesores() {
+            const materiasList = Array.from(materiasSet);
+            const divDeseados = document.getElementById('profesoresDeseados');
+            const divExcluidos = document.getElementById('profesoresExcluidos');
+
+            if (materiasList.length === 0) {
+                divDeseados.innerHTML = '<span class="text-xs text-gray-400 italic">Agrega materias para cargar profesores...</span>';
+                divExcluidos.innerHTML = '<span class="text-xs text-gray-400 italic">Agrega materias para cargar profesores...</span>';
+                return;
+            }
+
+            const ciclo = document.getElementById('ciclo').value.trim();
+            const centro = document.getElementById('centro').value;
+            
+            divDeseados.innerHTML = '<span class="text-xs text-gray-500 italic">Cargando...</span>';
+            divExcluidos.innerHTML = '<span class="text-xs text-gray-500 italic">Cargando...</span>';
+
+            try {
+                const response = await fetch('/api/profesores', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ materias: materiasList, ciclo, centro })
+                });
+                
+                if (!response.ok) throw new Error("Error al obtener profesores");
+                const data = await response.json();
+                
+                if (!data.profesores || data.profesores.length === 0) {
+                    divDeseados.innerHTML = '<span class="text-xs text-gray-400 italic">No se encontraron profesores</span>';
+                    divExcluidos.innerHTML = '<span class="text-xs text-gray-400 italic">No se encontraron profesores</span>';
+                    return;
+                }
+
+                // Guardar selecciones previas para no perderlas
+                const prevDeseados = Array.from(divDeseados.querySelectorAll('input:checked')).map(i => i.value);
+                const prevExcluidos = Array.from(divExcluidos.querySelectorAll('input:checked')).map(i => i.value);
+
+                const generarHTML = (profesores, tipo) => {
+                    return profesores.map(p => {
+                        const isChecked = (tipo === 'deseados' ? prevDeseados : prevExcluidos).includes(p) ? 'checked' : '';
+                        return `
+                            <label class="flex items-center gap-2 py-1 px-2 hover:bg-gray-100 rounded cursor-pointer">
+                                <input type="checkbox" value="${p}" class="chk-${tipo} rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${isChecked}>
+                                <span class="text-gray-700 text-xs">${p}</span>
+                            </label>
+                        `;
+                    }).join('');
+                };
+
+                divDeseados.innerHTML = generarHTML(data.profesores, 'deseados');
+                divExcluidos.innerHTML = generarHTML(data.profesores, 'excluidos');
+
+            } catch (error) {
+                console.error("Error cargando profesores:", error);
+                divDeseados.innerHTML = '<span class="text-xs text-red-500 italic">Error al cargar</span>';
+                divExcluidos.innerHTML = '<span class="text-xs text-red-500 italic">Error al cargar</span>';
+            }
+        }
+
+        document.getElementById('siiauForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            validarRangoHoras();
+            if (!e.currentTarget.reportValidity()) return;
+            const materiasList = Array.from(materiasSet);
+
+            if (materiasList.length === 0) {
+                alert("Agrega al menos una clave de materia a la lista.");
+                return;
+            }
+
+            const ciclo = document.getElementById('ciclo').value.trim();
+            const centro = document.getElementById('centro').value;
+            const diasDisponibles = Array.from(document.querySelectorAll('.availability-day:checked')).map(input => input.value);
+            
+                        // T14: Obtener valores de los checkboxes
+            const profesoresDeseados = Array.from(document.querySelectorAll('.chk-deseados:checked')).map(chk => chk.value);
+            const profesoresExcluidos = Array.from(document.querySelectorAll('.chk-excluidos:checked')).map(chk => chk.value);
+            
+            const loading = document.getElementById('loading');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const tablesContainer = document.getElementById('tablesContainer');
+            
+            loading.classList.remove('hidden');
+            resultsContainer.classList.add('hidden');
+            tablesContainer.innerHTML = '';
+            document.getElementById('validationSummary').classList.add('hidden');
+            document.getElementById('generatorMessage').classList.add('hidden');
+
+            try {
+                const response = await fetch(`/api/horarios/generar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        materias: materiasList,
+                        ciclo,
+                        centro,
+                        dias_disponibles: diasDisponibles,
+                        hora_inicio: document.getElementById('horaInicio').value || null,
+                        hora_fin: document.getElementById('horaFin').value || null,
+                        profesores_deseados: profesoresDeseados,
+                        profesores_excluidos: profesoresExcluidos,
+                        max_resultados: Number(document.getElementById('maxResultados').value)
+                    })
+                });
+
+                rawData = await response.json();
+
+                if (!response.ok || rawData.detail) {
+                    throw new Error(rawData.detail || `Error HTTP ${response.status}`);
+                }
+
+                renderValidationSummary(rawData.validacion || {});
+                renderGeneratedSchedules(rawData);
+
+                document.getElementById('jsonPreview').textContent = JSON.stringify(rawData, null, 2);
+                resultsContainer.classList.remove('hidden');
+            } catch (err) {
+                alert('⚠️ Error en la consulta: ' + err.message);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        });
+
+        function renderValidationSummary(validacion) {
+            const summary = document.getElementById('validationSummary');
+            const incidencias = Object.entries(validacion).filter(([, resultado]) =>
+                resultado.estado === 'clave_invalida' || resultado.estado === 'sin_oferta'
+            );
+
+            summary.replaceChildren();
+            if (incidencias.length === 0) {
+                summary.classList.add('hidden');
+                return;
+            }
+
+            const title = document.createElement('p');
+            title.className = 'font-semibold mb-2';
+            title.textContent = 'Revisa estas materias:';
+            summary.appendChild(title);
+
+            const list = document.createElement('ul');
+            list.className = 'list-disc pl-5 space-y-1';
+            incidencias.forEach(([materia, resultado]) => {
+                const item = document.createElement('li');
+                item.textContent = resultado.estado === 'clave_invalida'
+                    ? `${materia}: clave inválida. Usa entre 2 y 12 letras o números.`
+                    : `${materia}: no se encontró oferta en el ciclo y centro seleccionados.`;
+                list.appendChild(item);
+            });
+            summary.appendChild(list);
+            summary.classList.remove('hidden');
+        }
+
+        const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        const COLORES_MATERIA = [
+            ['#dbeafe', '#1d4ed8'], ['#dcfce7', '#15803d'], ['#fef3c7', '#b45309'],
+            ['#fce7f3', '#be185d'], ['#ede9fe', '#6d28d9'], ['#cffafe', '#0e7490'],
+            ['#ffedd5', '#c2410c'], ['#e0e7ff', '#4338ca']
+        ];
+        const INICIO_CALENDARIO = 7 * 60;
+        const DURACION_CALENDARIO = 14 * 60;
+        const ALTURA_CALENDARIO = 560;
+
+        function horaEnMinutos(valor) {
+            if (!valor) return null;
+            const partes = String(valor).trim().split(':');
+            if (partes.length === 2) return Number(partes[0]) * 60 + Number(partes[1]);
+            const compacto = String(valor).replace(/\D/g, '');
+            if (compacto.length === 3 || compacto.length === 4) {
+                const relleno = compacto.padStart(4, '0');
+                return Number(relleno.slice(0, 2)) * 60 + Number(relleno.slice(2));
+            }
+            return null;
+        }
+
+        function indiceDia(nombre) {
+            const normalizado = String(nombre).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            return DIAS_SEMANA.findIndex(dia => dia.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() === normalizado);
+        }
+
+        function renderGeneratedSchedules(data) {
+            const container = document.getElementById('tablesContainer');
+            const horarios = data.horarios || [];
+            document.getElementById('resultsHeader').textContent = `${horarios.length} horario(s) compatible(s)`;
+            document.getElementById('resultsSubheader').textContent =
+                `${(data.materias || []).join(', ')} · ${data.total_combinaciones_evaluadas || 0} combinaciones compatibles revisadas`;
+
+            if (data.mensaje) {
+                const message = document.getElementById('generatorMessage');
+                message.textContent = data.mensaje;
+                message.classList.remove('hidden');
+            }
+            if (data.busqueda_limitada) {
+                const message = document.getElementById('generatorMessage');
+                message.textContent = 'La búsqueda alcanzó su límite de combinaciones; los horarios mostrados son los mejores encontrados dentro del límite.';
+                message.classList.remove('hidden');
+            }
+            horarios.forEach((horario, index) => container.appendChild(crearTarjetaHorario(horario, index)));
+        }
+
+        function crearTarjetaHorario(horario, indice) {
+            const details = document.createElement('details');
+            details.className = 'bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden';
+            if (indice === 0) details.open = true;
+
+            const summary = document.createElement('summary');
+            summary.className = 'cursor-pointer list-none p-4 flex flex-wrap gap-2 justify-between items-center hover:bg-gray-50';
+            const title = document.createElement('span');
+            title.className = 'font-bold text-blue-900';
+            title.textContent = `Horario ${horario.numero || indice + 1}`;
+            const description = document.createElement('span');
+            description.className = 'text-xs text-gray-600';
+            description.textContent = `${horario.dias_con_clase} días · ${horario.minutos_libres} min de huecos · ${horario.minutos_de_jornada} min de jornada`;
+            summary.append(title, description);
+            details.appendChild(summary);
+
+            const content = document.createElement('div');
+            content.className = 'px-4 pb-5';
+            const calendarScroll = document.createElement('div');
+            calendarScroll.className = 'calendar-scroll border rounded-lg';
+            const calendar = document.createElement('div');
+            calendar.className = 'week-calendar';
+
+            const header = document.createElement('div');
+            header.className = 'week-header';
+            const blank = document.createElement('div');
+            blank.className = 'week-label';
+            header.appendChild(blank);
+            DIAS_SEMANA.forEach(dia => {
+                const label = document.createElement('div');
+                label.className = 'week-label';
+                label.textContent = dia;
+                header.appendChild(label);
+            });
+            calendar.appendChild(header);
+
+            const body = document.createElement('div');
+            body.className = 'week-body';
+            const axis = document.createElement('div');
+            axis.className = 'week-axis';
+            for (let hora = 7; hora <= 20; hora++) {
+                const label = document.createElement('span');
+                label.className = 'time-label';
+                label.style.top = `${(hora - 7) * 40}px`;
+                label.textContent = `${String(hora).padStart(2, '0')}:00`;
+                axis.appendChild(label);
+            }
+            const endLabel = document.createElement('span');
+            endLabel.className = 'time-label time-label-end';
+            endLabel.style.top = `${ALTURA_CALENDARIO}px`;
+            endLabel.textContent = '21:00';
+            axis.appendChild(endLabel);
+            body.appendChild(axis);
+
+            const columnas = document.createElement('div');
+            columnas.className = 'col-span-7 grid grid-cols-7';
+            const diasColumna = DIAS_SEMANA.map(() => {
+                const columna = document.createElement('div');
+                columna.className = 'week-column';
+                columnas.appendChild(columna);
+                return columna;
+            });
+            (horario.secciones || []).forEach((seccion, seccionIndex) => {
+                const colores = COLORES_MATERIA[seccionIndex % COLORES_MATERIA.length];
+                (seccion.horarios || []).forEach(reunion => {
+                    const inicio = horaEnMinutos(reunion.hora_inicio);
+                    const fin = horaEnMinutos(reunion.hora_fin);
+                    if (inicio === null || fin === null || fin <= inicio) return;
+                    (reunion.dias || []).forEach(nombreDia => {
+                        const diaIndex = indiceDia(nombreDia);
+                        if (diaIndex < 0) return;
+                        const top = Math.max(0, (inicio - INICIO_CALENDARIO) / DURACION_CALENDARIO * ALTURA_CALENDARIO);
+                        const bottom = Math.min(ALTURA_CALENDARIO, (fin - INICIO_CALENDARIO) / DURACION_CALENDARIO * ALTURA_CALENDARIO);
+                        if (bottom <= top) return;
+                        const event = document.createElement('div');
+                        event.className = 'class-event';
+                        event.style.top = `${top}px`;
+                        event.style.height = `${Math.max(25, bottom - top)}px`;
+                        event.style.backgroundColor = colores[0];
+                        event.style.borderLeft = `3px solid ${colores[1]}`;
+                        event.style.color = '#1f2937';
+                        const subject = document.createElement('strong');
+                        subject.textContent = `${seccion.clave || ''} ${seccion.materia || ''}`.trim();
+                        const time = document.createElement('span');
+                        time.textContent = `${reunion.hora_inicio}–${reunion.hora_fin} · NRC ${seccion.nrc || '—'}`;
+                        const professor = document.createElement('span');
+                        professor.textContent = (seccion.profesores || []).join(', ') || 'Sin profesor registrado';
+                        const room = document.createElement('span');
+                        room.textContent = [reunion.edificio, reunion.aula].filter(Boolean).join(' · ');
+                        event.append(subject, time, professor, room);
+                        diasColumna[diaIndex].appendChild(event);
+                    });
+                });
+            });
+            body.appendChild(columnas);
+            calendar.appendChild(body);
+            calendarScroll.appendChild(calendar);
+            content.appendChild(calendarScroll);
+
+            const legend = document.createElement('div');
+            legend.className = 'mt-4 flex flex-wrap gap-3';
+            (horario.secciones || []).forEach((seccion, index) => {
+                const item = document.createElement('span');
+                item.className = 'inline-flex items-center gap-2 text-xs text-gray-700';
+                const swatch = document.createElement('span');
+                swatch.className = 'w-3 h-3 rounded-sm';
+                swatch.style.backgroundColor = COLORES_MATERIA[index % COLORES_MATERIA.length][1];
+                const label = document.createElement('span');
+                label.textContent = `${seccion.clave || ''} · NRC ${seccion.nrc || '—'} · ${seccion.seccion || ''}`;
+                item.append(swatch, label);
+                legend.appendChild(item);
+            });
+            content.appendChild(legend);
+            details.appendChild(content);
+            return details;
+        }
+
+        function toggleJsonView() {
+            document.getElementById('jsonPreview').classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>
