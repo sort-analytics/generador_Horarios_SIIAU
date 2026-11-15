@@ -251,6 +251,7 @@
             divExcluidos.innerHTML = '<span class="text-xs text-gray-500 italic">Cargando...</span>';
 
             try {
+                // NOTA: Si estás probando en local, cambia esto a 'http://127.0.0.1:8000/api/profesores'
                 const response = await fetch('/api/profesores', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -320,6 +321,7 @@
             document.getElementById('generatorMessage').classList.add('hidden');
 
             try {
+                // NOTA: Si estás probando en local, cambia esto a `http://127.0.0.1:8000/api/horarios/generar`
                 const response = await fetch(`/api/horarios/generar`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -433,20 +435,72 @@
 
         function crearTarjetaHorario(horario, indice) {
             const details = document.createElement('details');
-            details.className = 'bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden';
+            // T10: Estilo especial para el primer horario (Mejor Opción)
+            details.className = indice === 0 
+                ? 'bg-white border-2 border-blue-500 rounded-xl shadow-md overflow-hidden relative' 
+                : 'bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden';
+            
             if (indice === 0) details.open = true;
 
             const summary = document.createElement('summary');
-            summary.className = 'cursor-pointer list-none p-4 flex flex-wrap gap-2 justify-between items-center hover:bg-gray-50';
+            summary.className = 'cursor-pointer list-none p-4 flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center hover:bg-gray-50 transition';
+
+            // Contenedor del lado izquierdo (Título + Badges)
+            const leftContainer = document.createElement('div');
+            leftContainer.className = 'flex flex-col gap-1';
+
+            const titleRow = document.createElement('div');
+            titleRow.className = 'flex items-center gap-2';
+            
             const title = document.createElement('span');
-            title.className = 'font-bold text-blue-900';
+            title.className = 'font-bold text-blue-900 text-lg';
             title.textContent = `Horario ${horario.numero || indice + 1}`;
+            titleRow.appendChild(title);
+
+            // --- T10: CLASIFICACIÓN VISUAL (Badges) ---
+            const badgesContainer = document.createElement('div');
+            badgesContainer.className = 'flex flex-wrap gap-1 mt-1';
+
+            const crearBadge = (texto, clases) => {
+                const badge = document.createElement('span');
+                badge.className = `px-2 py-0.5 rounded-full text-[10px] font-semibold border ${clases}`;
+                badge.textContent = texto;
+                return badge;
+            };
+
+            // 1. Etiqueta de Mejor Opción (solo para el índice 0)
+            if (indice === 0) {
+                badgesContainer.appendChild(crearBadge('⭐ Mejor Opción', 'bg-yellow-100 text-yellow-800 border-yellow-300'));
+            }
+
+            // 2. Etiqueta Sin Huecos
+            if (horario.minutos_libres === 0) {
+                badgesContainer.appendChild(crearBadge('🟢 Sin huecos', 'bg-green-100 text-green-800 border-green-300'));
+            }
+
+            // 3. Etiqueta Profesor Deseado
+            if (horario.profesores_deseados_encontrados > 0) {
+                badgesContainer.appendChild(crearBadge('🎓 Profe deseado', 'bg-purple-100 text-purple-800 border-purple-300'));
+            }
+
+            // 4. Etiqueta Pocos Días
+            if (horario.dias_con_clase <= 3) {
+                badgesContainer.appendChild(crearBadge('🏖️ Pocos días', 'bg-blue-100 text-blue-800 border-blue-300'));
+            }
+
+            leftContainer.appendChild(titleRow);
+            leftContainer.appendChild(badgesContainer);
+
+            // Contenedor del lado derecho (Estadísticas)
             const description = document.createElement('span');
-            description.className = 'text-xs text-gray-600';
+            description.className = 'text-xs text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 mt-2 sm:mt-0';
             description.textContent = `${horario.dias_con_clase} días · ${horario.minutos_libres} min de huecos · ${horario.minutos_de_jornada} min de jornada`;
-            summary.append(title, description);
+
+            summary.appendChild(leftContainer);
+            summary.appendChild(description);
             details.appendChild(summary);
 
+            // --- RESTO DEL CÓDIGO DEL CALENDARIO ---
             const content = document.createElement('div');
             content.className = 'px-4 pb-5';
             const calendarScroll = document.createElement('div');
