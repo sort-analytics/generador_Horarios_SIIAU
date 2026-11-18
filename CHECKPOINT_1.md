@@ -1,8 +1,8 @@
-# 📅 Generador de Horarios CUCEI — Checkpoint 1
+# Generador de Horarios CUCEI — Checkpoint 1
 
 **Fecha:** 18/11/2026
 
-### 👥 Equipo: Sort-Analitycs
+### Equipo: Sort-Analitycs
 * LOPEZ OLIVERA ALEJANDRO ESAU
 * RAMIREZ PEREZ OSCAR EMILIANO
 * RODRIGUEZ HERNANDEZ LUIS GIOVANNI
@@ -10,7 +10,7 @@
 
 ---
 
-## 🎯 Problema
+## Problema
 
 El Centro Universitario de Ciencias Exactas e Ingeniería (CUCEI) tiene numerosas matrículas en la institución y muchas materias que los estudiantes pueden agendar. Al ser también muchos estudiantes, se pueden generar dificultades para las inscripciones, como la disponibilidad de cupos y la posibilidad de agendar materias que se adapten bien a tus necesidades personales.
 
@@ -18,7 +18,7 @@ A la hora de agendar en **SIIAU** o en **LEO** se pueden generar algunos problem
 
 ---
 
-## 📊 FODA
+## FODA
 
 | Fortalezas | Oportunidades |
 | :--- | :--- |
@@ -30,7 +30,7 @@ A la hora de agendar en **SIIAU** o en **LEO** se pueden generar algunos problem
 
 ---
 
-## 📋 Backlog Inicial
+## Backlog Inicial
 
 Nuestro backlog inicial cuenta con un total de **20 tareas**, distribuyendo las tareas de la manera más óptima y eficiente para la correcta realización de nuestro proyecto[cite: 7]:
 
@@ -59,7 +59,7 @@ Nuestro backlog inicial cuenta con un total de **20 tareas**, distribuyendo las 
 
 ---
 
-## ⚙️ Algoritmo Funcional
+## Algoritmo Funcional
 
 El algoritmo base implementado en el archivo `api/index.py` es un **Backtracking** (Búsqueda con Vuelta Atrás).
 
