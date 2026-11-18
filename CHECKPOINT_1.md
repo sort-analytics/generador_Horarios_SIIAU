@@ -32,30 +32,30 @@ A la hora de agendar en **SIIAU** o en **LEO** se pueden generar algunos problem
 
 ## Backlog Inicial
 
-Nuestro backlog inicial cuenta con un total de **20 tareas**, distribuyendo las tareas de la manera más óptima y eficiente para la correcta realización de nuestro proyecto[cite: 7]:
+Nuestro backlog inicial cuenta con un total de **20 tareas**, distribuyendo las tareas de la manera más óptima y eficiente para la correcta realización de nuestro proyecto:
 
 | No. de tarea | Nombre de la tarea | Descripción de la tarea |
 | :---: | :--- | :--- |
-| **01** | **Analizar y preparar el backend existente**[cite: 7] | Revisar el código Python actual e identificar los módulos que se pueden reutilizar[cite: 7]. |
-| **02** | **Mejorar la consulta de información de SIIAU**[cite: 7] | Obtener materias, NRC, grupos, profesores, horarios y cupos disponibles[cite: 7]. |
-| **03** | **Implementar validación de materias**[cite: 7] | Validar las claves ingresadas por el estudiante y detectar materias inexistentes o sin oferta[cite: 7]. |
-| **04** | **Desarrollar endpoints de consulta**[cite: 7] | Crear servicios API para consultar materias, grupos y sus respectivos horarios[cite: 7]. |
-| **05** | **Estandarizar y preparar los datos académicos**[cite: 8] | Organizar la información obtenida en estructuras JSON para que pueda utilizarla el algoritmo y el frontend[cite: 8]. |
-| **06** | **Diseñar la lógica del algoritmo generador**[cite: 8] | Establecer las reglas y condiciones necesarias para combinar los grupos de las materias seleccionadas[cite: 8]. |
-| **07** | **Desarrollar la generación de combinaciones**[cite: 8] | Crear el algoritmo en Python para producir diferentes combinaciones de horarios[cite: 8]. |
-| **08** | **Implementar detección de empalmes**[cite: 8] | Evitar que dos materias se encuentren programadas en el mismo día y horario[cite: 8]. |
-| **09** | **Implementar filtros de disponibilidad**[cite: 8] | Considerar los días y horarios en los que el estudiante puede asistir a clases[cite: 8]. |
-| **10** | **Implementar optimización y clasificación de horarios**[cite: 8] | Ordenar las combinaciones según criterios como menos horas libres, jornadas compactas y preferencias del estudiante[cite: 8]. |
-| **11** | **Diseñar la estructura HTML de la página**[cite: 8] | Crear la estructura principal de la aplicación y sus diferentes secciones[cite: 8]. |
-| **12** | **Desarrollar los estilos CSS**[cite: 8] | Diseñar una interfaz visual atractiva, organizada, responsiva y fácil de utilizar[cite: 8]. |
-| **13** | **Crear el formulario de selección de materias**[cite: 8] | Permitir ingresar, agregar y eliminar las materias que el estudiante desea cursar[cite: 8]. |
-| **14** | **Implementar las preferencias del estudiante**[cite: 9] | Crear controles para seleccionar días disponibles, horarios preferidos y profesores deseados o excluidos[cite: 9]. |
-| **15** | **Desarrollar la visualización de horarios**[cite: 9] | Mostrar los horarios generados en un calendario semanal, incluyendo materias, profesores y horas[cite: 9]. |
-| **16** | **Conectar el frontend con el backend**[cite: 9] | Implementar peticiones HTTP con JavaScript utilizando Fetch API para consumir los servicios Python[cite: 9]. |
-| **17** | **Integrar el algoritmo con la aplicación web**[cite: 9] | Conectar el formulario de materias y preferencias con el algoritmo generador de horarios[cite: 9]. |
-| **18** | **Realizar pruebas funcionales**[cite: 9] | Verificar que las consultas, filtros y generación de horarios funcionen correctamente[cite: 9]. |
-| **19** | **Configurar el despliegue en Vercel**[cite: 9] | Configurar el repositorio, archivos de publicación, variables de entorno y despliegue del frontend[cite: 9]. |
-| **20** | **Documentar y validar la versión final**[cite: 9] | Documentar la instalación, arquitectura, funcionamiento y realizar una prueba integral de la aplicación publicada[cite: 9]. |
+| **01** | **Analizar y preparar el backend existente** | Revisar el código Python actual e identificar los módulos que se pueden reutilizar. |
+| **02** | **Mejorar la consulta de información de SIIAU** | Obtener materias, NRC, grupos, profesores, horarios y cupos disponibles. |
+| **03** | **Implementar validación de materias** | Validar las claves ingresadas por el estudiante y detectar materias inexistentes o sin oferta. |
+| **04** | **Desarrollar endpoints de consulta** | Crear servicios API para consultar materias, grupos y sus respectivos horarios. |
+| **05** | **Estandarizar y preparar los datos académicos** | Organizar la información obtenida en estructuras JSON para que pueda utilizarla el algoritmo y el frontend. |
+| **06** | **Diseñar la lógica del algoritmo generador** | Establecer las reglas y condiciones necesarias para combinar los grupos de las materias seleccionadas. |
+| **07** | **Desarrollar la generación de combinaciones** | Crear el algoritmo en Python para producir diferentes combinaciones de horarios. |
+| **08** | **Implementar detección de empalmes** | Evitar que dos materias se encuentren programadas en el mismo día y horario. |
+| **09** | **Implementar filtros de disponibilidad** | Considerar los días y horarios en los que el estudiante puede asistir a clases. |
+| **10** | **Implementar optimización y clasificación de horarios** | Ordenar las combinaciones según criterios como menos horas libres, jornadas compactas y preferencias del estudiante. |
+| **11** | **Diseñar la estructura HTML de la página** | Crear la estructura principal de la aplicación y sus diferentes secciones. |
+| **12** | **Desarrollar los estilos CSS** | Diseñar una interfaz visual atractiva, organizada, responsiva y fácil de utilizar. |
+| **13** | **Crear el formulario de selección de materias** | Permitir ingresar, agregar y eliminar las materias que el estudiante desea cursar. |
+| **14** | **Implementar las preferencias del estudiante** | Crear controles para seleccionar días disponibles, horarios preferidos y profesores deseados o excluidos. |
+| **15** | **Desarrollar la visualización de horarios** | Mostrar los horarios generados en un calendario semanal, incluyendo materias, profesores y horas. |
+| **16** | **Conectar el frontend con el backend** | Implementar peticiones HTTP con JavaScript utilizando Fetch API para consumir los servicios Python. |
+| **17** | **Integrar el algoritmo con la aplicación web** | Conectar el formulario de materias y preferencias con el algoritmo generador de horarios. |
+| **18** | **Realizar pruebas funcionales** | Verificar que las consultas, filtros y generación de horarios funcionen correctamente. |
+| **19** | **Configurar el despliegue en Vercel** | Configurar el repositorio, archivos de publicación, variables de entorno y despliegue del frontend. |
+| **20** | **Documentar y validar la versión final** | Documentar la instalación, arquitectura, funcionamiento y realizar una prueba integral de la aplicación publicada. |
 
 ---
 
